@@ -38,11 +38,13 @@ services:
     depends_on:
       - postgres
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_HOST=postgres
+      - DB_PORT=5432
       - POOL_MODE=transaction
       - MAX_CLIENT_CONN=100
       - DEFAULT_POOL_SIZE=20
-      # You can change 127.0.0.1 to 0.0.0.0 if you decide to expose this to the public internet
     ports:
       - "6432:5432" # Exposed so UFW can handle the whitelisting
     networks:
