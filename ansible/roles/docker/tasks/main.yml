@@ -1,0 +1,83 @@
+---
+- name: Install prerequisites for Docker repository
+  apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+
+- name: Create directory for Docker APT keyring
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download Docker official GPG key
+  get_url:
+    url: "https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}/gpg"
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+
+- name: Add Docker APT repository
+  deb822_repository:
+    name: docker
+    types: deb
+    uris: "https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}"
+    suites: "{{ ansible_facts['distribution_release'] }}"
+    components: stable
+    architectures: "{{ 'amd64' if ansible_facts['architecture'] in ['x86_64', 'amd64'] else 'arm64' }}"
+    signed_by: /etc/apt/keyrings/docker.asc
+    state: present
+
+- name: Install Docker CE and Compose plugin
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
+
+- name: Ensure Docker service is started and enabled
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Add target user to the docker group
+  user:
+    name: "{{ target_user }}"
+    groups: docker
+    append: yes
+
+- name: Create base directory for Docker configurations
+  file:
+    path: "{{ docker_base_dir }}"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+
+- name: Copy docker-compose configurations to target server
+  copy:
+    src: "{{ playbook_dir }}/../docker/"
+    dest: "{{ docker_base_dir }}/"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0755'
+
+- name: Copy root .env file to docker directory on target server
+  copy:
+    src: "{{ playbook_dir }}/../.env"
+    dest: "{{ docker_base_dir }}/.env"
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0600'
+
+- name: Start Docker Compose services
+  command: docker compose up -d
+  args:
+    chdir: "{{ docker_base_dir }}"
