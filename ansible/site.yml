@@ -1,0 +1,19 @@
+---
+- name: Provision Home Server Infrastructure
+  hosts: home_servers
+  become: true
+  gather_facts: true
+
+  vars:
+    # Default variables (can be overridden in group_vars or command line)
+    docker_base_dir: "/opt/docker"
+    target_user: "{{ lookup('env', 'SERVER_USER') | default('ubuntu', true) }}"
+    tailscale_ssh: true
+    tailscale_auth_key: "{{ lookup('env', 'TAILSCALE_AUTH_KEY') | default('', true) }}"
+    api_whitelist_ip: "{{ lookup('env', 'API_WHITELIST_IP') | default('', true) }}"
+
+  roles:
+    - role: base
+    - role: security
+    - role: docker
+    - role: tailscale
